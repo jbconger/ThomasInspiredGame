@@ -4,6 +4,8 @@ using UnityEngine.Events;
 public class PlayerController : MonoBehaviour
 {
 	Rigidbody2D rigidbody;
+	Animator animator;
+	SpriteRenderer spriteRenderer;
 	
 	struct Inputs
 	{
@@ -18,9 +20,8 @@ public class PlayerController : MonoBehaviour
 	private void Awake()
 	{
 		rigidbody = GetComponent<Rigidbody2D>();
-
-		//if (OnTouchedGround == null)
-		//	OnTouchedGround = new UnityEvent();
+		animator = GetComponent<Animator>();
+		spriteRenderer = GetComponent<SpriteRenderer>();
 	}
 
 	private void Update()
@@ -43,6 +44,11 @@ public class PlayerController : MonoBehaviour
 		inputs.Y = Input.GetAxis("Vertical");
 
 		isFacingLeft = inputs.RawX != 1 && (inputs.RawX == -1 || isFacingLeft);
+		
+		if (isFacingLeft)
+			spriteRenderer.flipX = true;
+		else
+			spriteRenderer.flipX = false;
 	}
 	#endregion
 
@@ -65,11 +71,16 @@ public class PlayerController : MonoBehaviour
 			hasJumped = false;
 			moveLerpSpeed = 100;
 			transform.SetParent(ground[0].transform);
+
+			animator.SetBool("Grounded", true);
+			animator.SetBool("Jumping", false);
+			PlaySound(groundedSound);
 		}
 		else if (isGrounded && !grounded)
 		{
 			isGrounded = false;
 			transform.SetParent(null);
+			animator.SetBool("Grounded", false);
 		}
 	}
 	#endregion
@@ -104,6 +115,8 @@ public class PlayerController : MonoBehaviour
 
 		Vector3 velocity = new Vector3(inputs.X * moveSpeed, rigidbody.velocity.y);
 		rigidbody.velocity = Vector3.MoveTowards(rigidbody.velocity, velocity, moveLerpSpeed * Time.deltaTime);
+
+		animator.SetBool("Walking", inputs.RawX != 0 && isGrounded);
 	}
 	#endregion
 
@@ -130,6 +143,9 @@ public class PlayerController : MonoBehaviour
 		{
 			rigidbody.velocity = direction;
 			hasJumped = true;
+
+			animator.SetBool("Jumping", true);
+			PlaySound(jumpSound);
 		}
 
 		if (rigidbody.velocity.y < jumpVelocityFalloff || rigidbody.velocity.y > 0 && (!Input.GetKey(KeyCode.Space) && !Input.GetKey(KeyCode.Z)))
@@ -160,6 +176,8 @@ public class PlayerController : MonoBehaviour
 			hasDashed = true;
 			timeStartedDash = Time.time;
 			rigidbody.gravityScale = 0;
+
+			PlaySound(dashSound);
 		}
 
 		if(isDashing)
@@ -178,4 +196,26 @@ public class PlayerController : MonoBehaviour
 		}
 	}
 	#endregion
+
+	#region Audio
+	[Header("Audio")]
+	[SerializeField] AudioSource audioSource;
+	[SerializeField] AudioClip jumpSound;
+	[SerializeField] AudioClip groundedSound;
+	[SerializeField] AudioClip dashSound;
+
+	private void PlaySound(AudioClip clip)
+	{
+		audioSource.clip = clip;
+		audioSource.Play();
+	}
+	#endregion
+
+	private void Flip()
+	{
+		isFacingLeft = !isFacingLeft;
+		Vector2 scale = transform.localScale;
+		scale *= -1;
+		transform.localScale = scale;
+	}
 }
