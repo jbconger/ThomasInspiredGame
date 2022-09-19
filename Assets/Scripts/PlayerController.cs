@@ -19,8 +19,8 @@ public class PlayerController : MonoBehaviour
 	{
 		rigidbody = GetComponent<Rigidbody2D>();
 
-		if (OnTouchedGround == null)
-			OnTouchedGround = new UnityEvent();
+		//if (OnTouchedGround == null)
+		//	OnTouchedGround = new UnityEvent();
 	}
 
 	private void Update()
@@ -29,15 +29,20 @@ public class PlayerController : MonoBehaviour
 		Grounding();
 		Walking();
 		Jumping();
+		Dashing();
 	}
 
 	#region Input
+	bool isFacingLeft;
+
 	private void CheckInput()
 	{
 		inputs.RawX = (int)Input.GetAxisRaw("Horizontal");
 		inputs.RawY = (int)Input.GetAxisRaw("Vertical");
 		inputs.X = Input.GetAxis("Horizontal");
 		inputs.Y = Input.GetAxis("Vertical");
+
+		isFacingLeft = inputs.RawX != 1 && (inputs.RawX == -1 || isFacingLeft);
 	}
 	#endregion
 
@@ -46,7 +51,6 @@ public class PlayerController : MonoBehaviour
 	[SerializeField] LayerMask groundMask;
 	[SerializeField] float groundOffset = -1, groundRadius = 0.2f;
 	public bool isGrounded;
-	public UnityEvent OnTouchedGround;
 
 	private readonly Collider2D[] ground = new Collider2D[1];
 
@@ -54,23 +58,17 @@ public class PlayerController : MonoBehaviour
 	{
 		bool grounded = Physics2D.OverlapCircleNonAlloc(transform.position + new Vector3(0, groundOffset), groundRadius, ground, groundMask) > 0;
 
-		//bool grounded = isGrounded;
-		//isGrounded = false;
-
-		//Collider2D
-
 		if (!isGrounded && grounded)
 		{
 			isGrounded = true;
+			hasDashed = false;
 			hasJumped = false;
 			moveLerpSpeed = 100;
-			OnTouchedGround?.Invoke();
 			transform.SetParent(ground[0].transform);
 		}
 		else if (isGrounded && !grounded)
 		{
 			isGrounded = false;
-			//timeLeftGrounded = Time.time;
 			transform.SetParent(null);
 		}
 	}
@@ -84,6 +82,9 @@ public class PlayerController : MonoBehaviour
 
 	private void Walking()
 	{
+		if (isDashing)
+			return;
+
 		if(Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
 		{
 			if (rigidbody.velocity.x > 0)
@@ -116,7 +117,10 @@ public class PlayerController : MonoBehaviour
 
 	private void Jumping()
 	{
-		if (Input.GetKeyDown(KeyCode.Space))
+		if (isDashing)
+			return;
+
+		if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Z))
 		{
 			if (!hasJumped)
 				PerformJump(new Vector2(rigidbody.velocity.x, jumpForce));
@@ -128,8 +132,50 @@ public class PlayerController : MonoBehaviour
 			hasJumped = true;
 		}
 
-		if (rigidbody.velocity.y < jumpVelocityFalloff || rigidbody.velocity.y > 0 && !Input.GetKey(KeyCode.Space))
+		if (rigidbody.velocity.y < jumpVelocityFalloff || rigidbody.velocity.y > 0 && (!Input.GetKey(KeyCode.Space) && !Input.GetKey(KeyCode.Z)))
 			rigidbody.velocity += fallMultiplier * Physics.gravity.y * Vector2.up * Time.deltaTime;
+	}
+	#endregion
+
+	#region Dash
+	[Header("Dash")]
+	[SerializeField] float dashSpeed = 20;
+	[SerializeField] float dashLength = 1;
+
+	float timeStartedDash;
+	bool hasDashed;
+	bool isDashing;
+	Vector3 dashDirection;
+
+	private void Dashing()
+	{
+		if (Input.GetKeyDown(KeyCode.X) && !hasDashed)
+		{
+			dashDirection = new Vector3(inputs.RawX, inputs.RawY).normalized;
+			
+			if (dashDirection == Vector3.zero)
+				dashDirection = isFacingLeft ? Vector3.left : Vector3.right;
+
+			isDashing = true;
+			hasDashed = true;
+			timeStartedDash = Time.time;
+			rigidbody.gravityScale = 0;
+		}
+
+		if(isDashing)
+		{
+			rigidbody.velocity = dashDirection * dashSpeed;
+
+			if (Time.time >= timeStartedDash + dashLength)
+			{
+				isDashing = false;
+				rigidbody.velocity = new Vector2(rigidbody.velocity.x, rigidbody.velocity.y > 2 ? 2 : rigidbody.velocity.y);
+				rigidbody.gravityScale = 1;
+
+				if (isGrounded)
+					hasDashed = false;
+			}
+		}
 	}
 	#endregion
 }
