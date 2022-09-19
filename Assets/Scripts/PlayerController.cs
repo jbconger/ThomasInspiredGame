@@ -125,7 +125,6 @@ public class PlayerController : MonoBehaviour
 	[SerializeField] float jumpForce = 15;
 	[SerializeField] float fallMultiplier = 7;
 	[SerializeField] float jumpVelocityFalloff = 8;
-	//float timeLeftGrounded = -10;
 	bool hasJumped;
 
 	private void Jumping()
@@ -139,17 +138,17 @@ public class PlayerController : MonoBehaviour
 				PerformJump(new Vector2(rigidbody.velocity.x, jumpForce));
 		}
 
-		void PerformJump(Vector3 direction)
-		{
-			rigidbody.velocity = direction;
-			hasJumped = true;
-
-			animator.SetBool("Jumping", true);
-			PlaySound(jumpSound);
-		}
-
 		if (rigidbody.velocity.y < jumpVelocityFalloff || rigidbody.velocity.y > 0 && (!Input.GetKey(KeyCode.Space) && !Input.GetKey(KeyCode.Z)))
 			rigidbody.velocity += fallMultiplier * Physics.gravity.y * Vector2.up * Time.deltaTime;
+	}
+
+	private void PerformJump(Vector3 direction)
+	{
+		rigidbody.velocity = direction;
+		hasJumped = true;
+
+		animator.SetBool("Jumping", true);
+		PlaySound(jumpSound);
 	}
 	#endregion
 
