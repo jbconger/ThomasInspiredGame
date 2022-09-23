@@ -17,11 +17,13 @@ public class PlayerController : MonoBehaviour
 
 	private Inputs inputs;
 
-	private void Awake()
+	private void Start()
 	{
 		rigidbody = GetComponent<Rigidbody2D>();
 		animator = GetComponent<Animator>();
 		spriteRenderer = GetComponent<SpriteRenderer>();
+
+		Goal.eventLevelEnd.AddListener(DisableController);
 	}
 
 	private void Update()
@@ -210,11 +212,14 @@ public class PlayerController : MonoBehaviour
 	}
 	#endregion
 
-	private void Flip()
+	public void EnableController()
 	{
-		isFacingLeft = !isFacingLeft;
-		Vector2 scale = transform.localScale;
-		scale *= -1;
-		transform.localScale = scale;
+		this.enabled = true;
+	}
+
+	public void DisableController()
+	{
+		this.enabled = false;
+		rigidbody.velocity = Vector2.zero;
 	}
 }
